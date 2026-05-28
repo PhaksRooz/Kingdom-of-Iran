@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, EmbedBuilder } = require("discord.js");
+const { Client, GatewayIntentBits, EmbedBuilder, REST, Routes, SlashCommandBuilder } = require("discord.js");
 
 const client = new Client({
   intents: [
@@ -41,7 +41,6 @@ function toJalali(gy, gm, gd) {
   return { jy, jm, jd };
 }
 
-// ─── اسامی فارسی ────────────────────────────────────────────────────────────
 const jalaliMonths = [
   "فروردین", "اردیبهشت", "خرداد",
   "تیر",     "مرداد",    "شهریور",
@@ -53,23 +52,21 @@ const jalaliDays = [
   "شنبه", "یک‌شنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنج‌شنبه", "جمعه",
 ];
 
-// نام برج‌ها (بر اساس ماه شمسی)
 const zodiacSigns = [
-  { name: "♈ حَمَل (بره)",      emoji: "♈" },
-  { name: "♉ ثَور (گاو)",       emoji: "♉" },
-  { name: "♊ جَوزا (دوپیکر)",   emoji: "♊" },
-  { name: "♋ سَرَطان (خرچنگ)", emoji: "♋" },
-  { name: "♌ اَسَد (شیر)",      emoji: "♌" },
-  { name: "♍ سُنبُله (خوشه)",  emoji: "♍" },
-  { name: "♎ میزان (ترازو)",    emoji: "♎" },
-  { name: "♏ عَقرَب (کژدم)",   emoji: "♏" },
-  { name: "♐ قَوس (کمان)",      emoji: "♐" },
-  { name: "♑ جَدی (بز)",        emoji: "♑" },
-  { name: "♒ دَلو (دلو)",       emoji: "♒" },
-  { name: "♓ حوت (ماهی)",       emoji: "♓" },
+  { name: "♈ حَمَل (بره)" },
+  { name: "♉ ثَور (گاو)" },
+  { name: "♊ جَوزا (دوپیکر)" },
+  { name: "♋ سَرَطان (خرچنگ)" },
+  { name: "♌ اَسَد (شیر)" },
+  { name: "♍ سُنبُله (خوشه)" },
+  { name: "♎ میزان (ترازو)" },
+  { name: "♏ عَقرَب (کژدم)" },
+  { name: "♐ قَوس (کمان)" },
+  { name: "♑ جَدی (بز)" },
+  { name: "♒ دَلو (دلو)" },
+  { name: "♓ حوت (ماهی)" },
 ];
 
-// فصل‌ها
 function getSeason(jm) {
   if (jm <= 3)  return "🌸 بهار";
   if (jm <= 6)  return "☀️ تابستان";
@@ -77,87 +74,15 @@ function getSeason(jm) {
   return "❄️ زمستان";
 }
 
-// اعداد فارسی
 function toPersianNum(n) {
   return String(n).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]);
 }
 
-// روز هفته فارسی
 function getPersianWeekday(date) {
-  const day = date.getDay(); // 0=Sun
-  // تبدیل: شنبه=6، یک‌شنبه=0، ...
+  const day = date.getDay();
   const map = [1, 2, 3, 4, 5, 6, 0];
   return jalaliDays[map[day]];
 }
-
-// ─── هندلر کامند ────────────────────────────────────────────────────────────
-client.on("messageCreate", async (message) => {
-  if (message.author.bot) return;
-
-  const content = message.content.trim().toLowerCase();
-  if (content !== "/calender" && content !== "/calendar") return;
-
-  const now = new Date();
-  const { jy, jm, jd } = toJalali(
-    now.getFullYear(),
-    now.getMonth() + 1,
-    now.getDate()
-  );
-
-  const monthName  = jalaliMonths[jm - 1];
-  const zodiac     = zodiacSigns[jm - 1];
-  const season     = getSeason(jm);
-  const weekday    = getPersianWeekday(now);
-
-  // ساعت به وقت تهران (UTC+3:30)
-  const tehranOffset = 3.5 * 60;
-  const tehranTime = new Date(now.getTime() + (tehranOffset - (-now.getTimezoneOffset())) * 60000);
-  const hours   = String(tehranTime.getHours()).padStart(2, "0");
-  const minutes = String(tehranTime.getMinutes()).padStart(2, "0");
-
-  const embed = new EmbedBuilder()
-    .setColor(0x2f6b3f)
-    .setTitle("📅  تقویم شمسی")
-    .setDescription(
-      `> **${weekday}، ${toPersianNum(jd)} ${monthName} ${toPersianNum(jy)}**`
-    )
-    .addFields(
-      {
-        name: "📆 تاریخ کامل",
-        value: `\`${toPersianNum(jy)}/${String(jm).padStart(2,"0")}/${String(jd).padStart(2,"0")}\``,
-        inline: true,
-      },
-      {
-        name: "🕰️ ساعت (تهران)",
-        value: `\`${hours}:${minutes}\``,
-        inline: true,
-      },
-      {
-        name: "🌿 فصل",
-        value: season,
-        inline: true,
-      },
-      {
-        name: "⭐ برج ماه",
-        value: zodiac.name,
-        inline: true,
-      },
-      {
-        name: "📖 ماه شمسی",
-        value: `ماه **${monthName}** — ماه ${toPersianNum(jm)}ام سال`,
-        inline: true,
-      },
-      {
-        name: "🗓️ روز سال",
-        value: `روز **${toPersianNum(getDayOfYear(jm, jd))}** از ۳۶۵`,
-        inline: true,
-      }
-    )
-    .setFooter({ text: "تقویم جلالی • Jalali Calendar" })
-    .setTimestamp();
-
-  await message.reply({ embeds: [embed] });
-});
 
 function getDayOfYear(jm, jd) {
   let days = jd;
@@ -167,9 +92,71 @@ function getDayOfYear(jm, jd) {
   return days;
 }
 
-// ─── ورود ربات ──────────────────────────────────────────────────────────────
-client.once("ready", () => {
+function buildEmbed() {
+  const now = new Date();
+  const { jy, jm, jd } = toJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  const monthName = jalaliMonths[jm - 1];
+  const zodiac    = zodiacSigns[jm - 1];
+  const season    = getSeason(jm);
+  const weekday   = getPersianWeekday(now);
+
+  const tehranOffset = 3.5 * 60;
+  const tehranTime = new Date(now.getTime() + (tehranOffset - (-now.getTimezoneOffset())) * 60000);
+  const hours   = String(tehranTime.getHours()).padStart(2, "0");
+  const minutes = String(tehranTime.getMinutes()).padStart(2, "0");
+
+  return new EmbedBuilder()
+    .setColor(0x2f6b3f)
+    .setTitle("📅  Kingdom of Iran | تقویم شمسی")
+    .setDescription(`> **${weekday}، ${toPersianNum(jd)} ${monthName} ${toPersianNum(jy)}**`)
+    .addFields(
+      { name: "📆 تاریخ کامل", value: `\`${toPersianNum(jy)}/${String(jm).padStart(2,"0")}/${String(jd).padStart(2,"0")}\``, inline: true },
+      { name: "🕰️ ساعت (تهران)", value: `\`${hours}:${minutes}\``, inline: true },
+      { name: "🌿 فصل", value: season, inline: true },
+      { name: "⭐ برج ماه", value: zodiac.name, inline: true },
+      { name: "📖 ماه شمسی", value: `ماه **${monthName}** — ماه ${toPersianNum(jm)}ام سال`, inline: true },
+      { name: "🗓️ روز سال", value: `روز **${toPersianNum(getDayOfYear(jm, jd))}** از ۳۶۵`, inline: true }
+    )
+    .setFooter({ text: "Kingdom of Iran • تقویم جلالی" })
+    .setTimestamp();
+}
+
+// ─── ثبت Slash Command ──────────────────────────────────────────────────────
+client.once("ready", async () => {
   console.log(`✅ ربات آنلاین شد: ${client.user.tag}`);
+
+  const commands = [
+    new SlashCommandBuilder()
+      .setName("calender")
+      .setDescription("📅 نمایش تاریخ شمسی، برج و فصل فعلی")
+      .toJSON(),
+  ];
+
+  const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
+
+  try {
+    await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
+    console.log("✅ Slash Commands ثبت شدند");
+  } catch (err) {
+    console.error("❌ خطا در ثبت commands:", err);
+  }
+});
+
+// ─── هندلر Slash Command ────────────────────────────────────────────────────
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
+  if (interaction.commandName === "calender") {
+    await interaction.reply({ embeds: [buildEmbed()] });
+  }
+});
+
+// ─── هندلر پیام معمولی (پشتیبانی قدیمی) ───────────────────────────────────
+client.on("messageCreate", async (message) => {
+  if (message.author.bot) return;
+  const content = message.content.trim().toLowerCase();
+  if (content === "/calender" || content === "/calendar") {
+    await message.reply({ embeds: [buildEmbed()] });
+  }
 });
 
 client.login(process.env.DISCORD_TOKEN);
