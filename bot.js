@@ -222,6 +222,13 @@ client.on("interactionCreate", async (interaction) => {
     const edamChannel = await client.channels.fetch(channelId);
     await edamChannel.send({ embeds: [edamEmbed] });
 
+    // بن دائم از سرور
+    try {
+      await interaction.guild.members.ban(target.id, { reason: reason });
+    } catch (err) {
+      console.error("❌ خطا در بن:", err);
+    }
+
     await interaction.reply({
       embeds: [
         new EmbedBuilder()
