@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, EmbedBuilder, REST, Routes, SlashCommandBuilder } = require("discord.js");
+const { Client, GatewayIntentBits, EmbedBuilder, REST, Routes, SlashCommandBuilder, ChannelType } = require("discord.js");
 
 const client = new Client({
   intents: [
@@ -39,30 +39,13 @@ function toJalali(gy, gm, gd) {
   return { jy, jm, jd };
 }
 
-const jalaliMonths = [
-  "فروردین","اردیبهشت","خرداد",
-  "تیر","مرداد","شهریور",
-  "مهر","آبان","آذر",
-  "دی","بهمن","اسفند",
-];
-
-const jalaliDays = [
-  "شنبه","یک‌شنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنج‌شنبه","جمعه",
-];
-
+const jalaliMonths = ["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
+const jalaliDays = ["شنبه","یک‌شنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنج‌شنبه","جمعه"];
 const zodiacSigns = [
-  { name: "♈ حَمَل (بره)" },
-  { name: "♉ ثَور (گاو)" },
-  { name: "♊ جَوزا (دوپیکر)" },
-  { name: "♋ سَرَطان (خرچنگ)" },
-  { name: "♌ اَسَد (شیر)" },
-  { name: "♍ سُنبُله (خوشه)" },
-  { name: "♎ میزان (ترازو)" },
-  { name: "♏ عَقرَب (کژدم)" },
-  { name: "♐ قَوس (کمان)" },
-  { name: "♑ جَدی (بز)" },
-  { name: "♒ دَلو (دلو)" },
-  { name: "♓ حوت (ماهی)" },
+  {name:"♈ حَمَل (بره)"},{name:"♉ ثَور (گاو)"},{name:"♊ جَوزا (دوپیکر)"},
+  {name:"♋ سَرَطان (خرچنگ)"},{name:"♌ اَسَد (شیر)"},{name:"♍ سُنبُله (خوشه)"},
+  {name:"♎ میزان (ترازو)"},{name:"♏ عَقرَب (کژدم)"},{name:"♐ قَوس (کمان)"},
+  {name:"♑ جَدی (بز)"},{name:"♒ دَلو (دلو)"},{name:"♓ حوت (ماهی)"},
 ];
 
 function getSeason(jm) {
@@ -71,23 +54,20 @@ function getSeason(jm) {
   if (jm <= 9) return "🍂 پاییز";
   return "❄️ زمستان";
 }
-
 function toPersianNum(n) {
   return String(n).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]);
 }
-
 function getPersianWeekday(date) {
-  const day = date.getDay();
-  const map = [1, 2, 3, 4, 5, 6, 0];
-  return jalaliDays[map[day]];
+  const map = [1,2,3,4,5,6,0];
+  return jalaliDays[map[date.getDay()]];
 }
-
 function getDayOfYear(jm, jd) {
   let days = jd;
-  for (let i = 1; i < jm; i++) {
-    days += i <= 6 ? 31 : 30;
-  }
+  for (let i = 1; i < jm; i++) days += i <= 6 ? 31 : 30;
   return days;
+}
+function rand(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function buildCalenderEmbed() {
@@ -98,12 +78,9 @@ function buildCalenderEmbed() {
   const zodiac    = zodiacSigns[jm - 1];
   const season    = getSeason(jm);
   const weekday   = getPersianWeekday(now);
-
-  const tehranOffset = 3.5 * 60;
-  const tehranTime = new Date(now.getTime() + (tehranOffset - (-now.getTimezoneOffset())) * 60000);
+  const tehranTime = new Date(now.getTime() + (3.5 * 60 - (-now.getTimezoneOffset())) * 60000);
   const hours   = String(tehranTime.getHours()).padStart(2, "0");
   const minutes = String(tehranTime.getMinutes()).padStart(2, "0");
-
   return new EmbedBuilder()
     .setColor(0x2f6b3f)
     .setTitle("📅  Kingdom of Iran | تقویم شاهنشاهی")
@@ -120,43 +97,101 @@ function buildCalenderEmbed() {
     .setTimestamp();
 }
 
-// ─── ذخیره کانال اعدام ──────────────────────────────────────────────────────
+// ─── تنظیمات تولید ──────────────────────────────────────────────────────────
 const edamChannels = {};
+
+// نوع تولیدها
+const productions = {
+  f22:  { emoji: "✈️",  name: "جنگنده F-22",  unit: "جنگنده" },
+  f16:  { emoji: "🛩️", name: "جنگنده F-16",  unit: "جنگنده" },
+  gun:  { emoji: "🔫",  name: "اسلحه",         unit: "اسلحه"  },
+  tir:  { emoji: "🟡",  name: "تیر",           unit: "تیر"    },
+  naft: { emoji: "🛢️", name: "نفت",           unit: "بشکه"   },
+};
+
+// ذخیره کانال‌های تولید و تایمرها
+const prodChannels = {}; // guildId -> { f22: channelId, ... }
+const prodTimers   = {}; // guildId -> { f22: intervalId, ... }
+
+// ─── تابع شروع تولید ────────────────────────────────────────────────────────
+function startProduction(guild, type) {
+  const info = productions[type];
+  const channelId = prodChannels[guild.id]?.[type];
+  if (!channelId) return;
+
+  // اگه قبلاً تایمر داشت، پاکش کن
+  if (prodTimers[guild.id]?.[type]) {
+    clearInterval(prodTimers[guild.id][type]);
+  }
+
+  if (!prodTimers[guild.id]) prodTimers[guild.id] = {};
+
+  const sendProduction = async () => {
+    try {
+      const channel = await client.channels.fetch(channelId);
+      const amount = rand(2, 7);
+      const embed = new EmbedBuilder()
+        .setColor(0xf0a500)
+        .setTitle(`${info.emoji} تولید ${info.name}`)
+        .setDescription(`**${amount}** ${info.unit} ${info.name} تولید شد!`)
+        .setFooter({ text: "Kingdom of Iran • سیستم تولید" })
+        .setTimestamp();
+      await channel.send({ embeds: [embed] });
+    } catch (err) {
+      console.error(`خطا در تولید ${type}:`, err);
+    }
+  };
+
+  // یه بار الان بفرست، بعد هر ۱۰ ساعت
+  sendProduction();
+  prodTimers[guild.id][type] = setInterval(sendProduction, 10 * 60 * 60 * 1000);
+}
 
 // ─── ثبت Slash Commands ─────────────────────────────────────────────────────
 client.once("ready", async () => {
   console.log(`✅ ربات آنلاین شد: ${client.user.tag}`);
 
+  const channelOption = (cmd, desc) =>
+    new SlashCommandBuilder()
+      .setName(cmd)
+      .setDescription(desc)
+      .addChannelOption(opt =>
+        opt.setName("channel")
+          .setDescription("کانال تولید")
+          .setRequired(true)
+      )
+      .toJSON();
+
   const commands = [
     new SlashCommandBuilder()
       .setName("calender")
-      .setDescription("📅 نمایش تاریخ شاهنشاهی، برج و فصل فعلی")
+      .setDescription("📅 نمایش تاریخ شاهنشاهی")
       .toJSON(),
 
     new SlashCommandBuilder()
       .setName("setupedam")
       .setDescription("⚙️ تنظیم کانال ثبت اعدام‌ها")
       .addChannelOption(opt =>
-        opt.setName("channel")
-          .setDescription("کانالی که لیست اعدام‌ها توش ثبت میشه")
-          .setRequired(true)
-      )
-      .toJSON(),
+        opt.setName("channel").setDescription("کانال اعدام").setRequired(true)
+      ).toJSON(),
 
     new SlashCommandBuilder()
       .setName("edam")
-      .setDescription("⚔️ اعدام یک کاربر و ثبت آن در کانال مخصوص")
-      .addUserOption(opt =>
-        opt.setName("user")
-          .setDescription("کاربری که اعدام میشه")
-          .setRequired(true)
-      )
-      .addStringOption(opt =>
-        opt.setName("reason")
-          .setDescription("دلیل اعدام")
-          .setRequired(true)
-      )
+      .setDescription("⚔️ اعدام یک کاربر")
+      .addUserOption(opt => opt.setName("user").setDescription("کاربر").setRequired(true))
+      .addStringOption(opt => opt.setName("reason").setDescription("دلیل").setRequired(true))
       .toJSON(),
+
+    new SlashCommandBuilder()
+      .setName("staregh")
+      .setDescription("🚀 شروع تولید در تمام کانال‌های تنظیم‌شده")
+      .toJSON(),
+
+    channelOption("tolidf22",  "✈️ تنظیم کانال تولید جنگنده F-22"),
+    channelOption("tolidf16",  "🛩️ تنظیم کانال تولید جنگنده F-16"),
+    channelOption("tolidgun",  "🔫 تنظیم کانال تولید اسلحه"),
+    channelOption("tolidtir",  "🟡 تنظیم کانال تولید تیر"),
+    channelOption("tolidnaft", "🛢️ تنظیم کانال تولید نفت"),
   ];
 
   const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
@@ -164,55 +199,45 @@ client.once("ready", async () => {
     await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
     console.log("✅ Slash Commands ثبت شدند");
   } catch (err) {
-    console.error("❌ خطا در ثبت commands:", err);
+    console.error("❌ خطا:", err);
   }
 });
 
-// ─── هندلر Slash Commands ───────────────────────────────────────────────────
+// ─── هندلر Interactions ─────────────────────────────────────────────────────
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
+  const cmd = interaction.commandName;
 
   // /calender
-  if (interaction.commandName === "calender") {
-    await interaction.reply({ embeds: [buildCalenderEmbed()] });
+  if (cmd === "calender") {
+    return interaction.reply({ embeds: [buildCalenderEmbed()] });
   }
 
   // /setupedam
-  if (interaction.commandName === "setupedam") {
+  if (cmd === "setupedam") {
     const channel = interaction.options.getChannel("channel");
     edamChannels[interaction.guildId] = channel.id;
-    await interaction.reply({
-      embeds: [
-        new EmbedBuilder()
-          .setColor(0x8b0000)
-          .setTitle("⚙️ تنظیمات اعدام")
-          .setDescription(`کانال اعدام‌ها تنظیم شد!\n📌 کانال: <#${channel.id}>`)
-          .setFooter({ text: "Kingdom of Iran" })
-      ],
+    return interaction.reply({
+      embeds: [new EmbedBuilder().setColor(0x8b0000).setTitle("⚙️ تنظیمات اعدام").setDescription(`کانال اعدام: <#${channel.id}>`)],
       ephemeral: true
     });
   }
 
   // /edam
-  if (interaction.commandName === "edam") {
+  if (cmd === "edam") {
     const channelId = edamChannels[interaction.guildId];
-    if (!channelId) {
-      return interaction.reply({
-        content: "❌ ابتدا با دستور `/setupedam` کانال اعدام را تنظیم کنید!",
-        ephemeral: true
-      });
-    }
+    if (!channelId) return interaction.reply({ content: "❌ ابتدا `/setupedam` را اجرا کنید!", ephemeral: true });
 
-    const target = interaction.options.getUser("user");
-    const reason = interaction.options.getString("reason");
+    const target   = interaction.options.getUser("user");
+    const reason   = interaction.options.getString("reason");
     const executor = interaction.user;
 
     const edamEmbed = new EmbedBuilder()
       .setColor(0x8b0000)
-      .setTitle("# ⚔️ اعدام")
+      .setTitle("⚔️ اعدام")
       .addFields(
-        { name: "👤 نام", value: `<@${target.id}>`, inline: false },
-        { name: "💀 دلیل مرگ", value: reason, inline: false },
+        { name: "👤 نام",          value: `<@${target.id}>`,   inline: false },
+        { name: "💀 دلیل مرگ",    value: reason,               inline: false },
         { name: "⚔️ اعدام‌کننده", value: `<@${executor.id}>`, inline: false },
       )
       .setThumbnail(target.displayAvatarURL())
@@ -222,25 +247,61 @@ client.on("interactionCreate", async (interaction) => {
     const edamChannel = await client.channels.fetch(channelId);
     await edamChannel.send({ embeds: [edamEmbed] });
 
-    // بن دائم از سرور
+    // بن دائم
     try {
       await interaction.guild.members.ban(target.id, { reason: reason });
     } catch (err) {
       console.error("❌ خطا در بن:", err);
     }
 
-    await interaction.reply({
-      embeds: [
-        new EmbedBuilder()
-          .setColor(0x8b0000)
-          .setDescription(`✅ اعدام **${target.username}** با موفقیت ثبت شد.`)
-      ],
+    return interaction.reply({
+      embeds: [new EmbedBuilder().setColor(0x8b0000).setDescription(`✅ **${target.username}** اعدام و بن شد.`)],
+      ephemeral: true
+    });
+  }
+
+  // /tolidXXX — تنظیم کانال تولید
+  const setupMap = { tolidf22: "f22", tolidf16: "f16", tolidgun: "gun", tolidtir: "tir", tolidnaft: "naft" };
+  if (setupMap[cmd]) {
+    const type    = setupMap[cmd];
+    const info    = productions[type];
+    const channel = interaction.options.getChannel("channel");
+    if (!prodChannels[interaction.guildId]) prodChannels[interaction.guildId] = {};
+    prodChannels[interaction.guildId][type] = channel.id;
+    return interaction.reply({
+      embeds: [new EmbedBuilder().setColor(0xf0a500)
+        .setTitle(`${info.emoji} تنظیم تولید ${info.name}`)
+        .setDescription(`کانال **<#${channel.id}>** برای تولید ${info.name} تنظیم شد.\nبرای شروع تولید از \`/staregh\` استفاده کن.`)
+        .setFooter({ text: "Kingdom of Iran" })],
+      ephemeral: true
+    });
+  }
+
+  // /staregh — شروع همه تولیدها
+  if (cmd === "staregh") {
+    const guildProds = prodChannels[interaction.guildId];
+    if (!guildProds || Object.keys(guildProds).length === 0) {
+      return interaction.reply({ content: "❌ هنوز هیچ کانال تولیدی تنظیم نشده!", ephemeral: true });
+    }
+
+    let started = [];
+    for (const type of Object.keys(guildProds)) {
+      startProduction(interaction.guild, type);
+      started.push(`${productions[type].emoji} ${productions[type].name}`);
+    }
+
+    return interaction.reply({
+      embeds: [new EmbedBuilder()
+        .setColor(0x2ecc71)
+        .setTitle("🚀 تولید شروع شد!")
+        .setDescription(`تولید هر ۱۰ ساعت انجام میشه:\n${started.join("\n")}`)
+        .setFooter({ text: "Kingdom of Iran • سیستم تولید" })],
       ephemeral: true
     });
   }
 });
 
-// ─── هندلر پیام معمولی ──────────────────────────────────────────────────────
+// ─── پیام معمولی ────────────────────────────────────────────────────────────
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
   const content = message.content.trim().toLowerCase();
