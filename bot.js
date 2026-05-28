@@ -19,9 +19,7 @@ function toJalali(gy, gm, gd) {
     Math.floor((gy2 + 3) / 4) -
     Math.floor((gy2 + 99) / 100) +
     Math.floor((gy2 + 399) / 400) -
-    80 +
-    gd +
-    g_d_no[gm - 1];
+    80 + gd + g_d_no[gm - 1];
   jy += 33 * Math.floor(days / 12053);
   days %= 12053;
   jy += 4 * Math.floor(days / 1461);
@@ -42,14 +40,14 @@ function toJalali(gy, gm, gd) {
 }
 
 const jalaliMonths = [
-  "فروردین", "اردیبهشت", "خرداد",
-  "تیر",     "مرداد",    "شهریور",
-  "مهر",     "آبان",     "آذر",
-  "دی",      "بهمن",     "اسفند",
+  "فروردین","اردیبهشت","خرداد",
+  "تیر","مرداد","شهریور",
+  "مهر","آبان","آذر",
+  "دی","بهمن","اسفند",
 ];
 
 const jalaliDays = [
-  "شنبه", "یک‌شنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنج‌شنبه", "جمعه",
+  "شنبه","یک‌شنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنج‌شنبه","جمعه",
 ];
 
 const zodiacSigns = [
@@ -68,9 +66,9 @@ const zodiacSigns = [
 ];
 
 function getSeason(jm) {
-  if (jm <= 3)  return "🌸 بهار";
-  if (jm <= 6)  return "☀️ تابستان";
-  if (jm <= 9)  return "🍂 پاییز";
+  if (jm <= 3) return "🌸 بهار";
+  if (jm <= 6) return "☀️ تابستان";
+  if (jm <= 9) return "🍂 پاییز";
   return "❄️ زمستان";
 }
 
@@ -92,10 +90,10 @@ function getDayOfYear(jm, jd) {
   return days;
 }
 
-function buildEmbed() {
+function buildCalenderEmbed() {
   const now = new Date();
   const { jy, jm, jd } = toJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
-  const imperialYear = jy + 1180; // تقویم شاهنشاهی
+  const imperialYear = jy + 1180;
   const monthName = jalaliMonths[jm - 1];
   const zodiac    = zodiacSigns[jm - 1];
   const season    = getSeason(jm);
@@ -122,19 +120,46 @@ function buildEmbed() {
     .setTimestamp();
 }
 
-// ─── ثبت Slash Command ──────────────────────────────────────────────────────
+// ─── ذخیره کانال اعدام ──────────────────────────────────────────────────────
+const edamChannels = {};
+
+// ─── ثبت Slash Commands ─────────────────────────────────────────────────────
 client.once("ready", async () => {
   console.log(`✅ ربات آنلاین شد: ${client.user.tag}`);
 
   const commands = [
     new SlashCommandBuilder()
       .setName("calender")
-      .setDescription("📅 نمایش تاریخ شمسی، برج و فصل فعلی")
+      .setDescription("📅 نمایش تاریخ شاهنشاهی، برج و فصل فعلی")
+      .toJSON(),
+
+    new SlashCommandBuilder()
+      .setName("setupedam")
+      .setDescription("⚙️ تنظیم کانال ثبت اعدام‌ها")
+      .addChannelOption(opt =>
+        opt.setName("channel")
+          .setDescription("کانالی که لیست اعدام‌ها توش ثبت میشه")
+          .setRequired(true)
+      )
+      .toJSON(),
+
+    new SlashCommandBuilder()
+      .setName("edam")
+      .setDescription("⚔️ اعدام یک کاربر و ثبت آن در کانال مخصوص")
+      .addUserOption(opt =>
+        opt.setName("user")
+          .setDescription("کاربری که اعدام میشه")
+          .setRequired(true)
+      )
+      .addStringOption(opt =>
+        opt.setName("reason")
+          .setDescription("دلیل اعدام")
+          .setRequired(true)
+      )
       .toJSON(),
   ];
 
   const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
-
   try {
     await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
     console.log("✅ Slash Commands ثبت شدند");
@@ -143,20 +168,77 @@ client.once("ready", async () => {
   }
 });
 
-// ─── هندلر Slash Command ────────────────────────────────────────────────────
+// ─── هندلر Slash Commands ───────────────────────────────────────────────────
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
+
+  // /calender
   if (interaction.commandName === "calender") {
-    await interaction.reply({ embeds: [buildEmbed()] });
+    await interaction.reply({ embeds: [buildCalenderEmbed()] });
+  }
+
+  // /setupedam
+  if (interaction.commandName === "setupedam") {
+    const channel = interaction.options.getChannel("channel");
+    edamChannels[interaction.guildId] = channel.id;
+    await interaction.reply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0x8b0000)
+          .setTitle("⚙️ تنظیمات اعدام")
+          .setDescription(`کانال اعدام‌ها تنظیم شد!\n📌 کانال: <#${channel.id}>`)
+          .setFooter({ text: "Kingdom of Iran" })
+      ],
+      ephemeral: true
+    });
+  }
+
+  // /edam
+  if (interaction.commandName === "edam") {
+    const channelId = edamChannels[interaction.guildId];
+    if (!channelId) {
+      return interaction.reply({
+        content: "❌ ابتدا با دستور `/setupedam` کانال اعدام را تنظیم کنید!",
+        ephemeral: true
+      });
+    }
+
+    const target = interaction.options.getUser("user");
+    const reason = interaction.options.getString("reason");
+    const executor = interaction.user;
+
+    const edamEmbed = new EmbedBuilder()
+      .setColor(0x8b0000)
+      .setTitle("# ⚔️ اعدام")
+      .addFields(
+        { name: "👤 نام", value: `<@${target.id}>`, inline: false },
+        { name: "💀 دلیل مرگ", value: reason, inline: false },
+        { name: "⚔️ اعدام‌کننده", value: `<@${executor.id}>`, inline: false },
+      )
+      .setThumbnail(target.displayAvatarURL())
+      .setFooter({ text: "Kingdom of Iran" })
+      .setTimestamp();
+
+    const edamChannel = await client.channels.fetch(channelId);
+    await edamChannel.send({ embeds: [edamEmbed] });
+
+    await interaction.reply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0x8b0000)
+          .setDescription(`✅ اعدام **${target.username}** با موفقیت ثبت شد.`)
+      ],
+      ephemeral: true
+    });
   }
 });
 
-// ─── هندلر پیام معمولی (پشتیبانی قدیمی) ───────────────────────────────────
+// ─── هندلر پیام معمولی ──────────────────────────────────────────────────────
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
   const content = message.content.trim().toLowerCase();
   if (content === "/calender" || content === "/calendar") {
-    await message.reply({ embeds: [buildEmbed()] });
+    await message.reply({ embeds: [buildCalenderEmbed()] });
   }
 });
 
