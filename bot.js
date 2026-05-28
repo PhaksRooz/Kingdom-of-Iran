@@ -95,6 +95,7 @@ function getDayOfYear(jm, jd) {
 function buildEmbed() {
   const now = new Date();
   const { jy, jm, jd } = toJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  const imperialYear = jy + 1180; // تقویم شاهنشاهی
   const monthName = jalaliMonths[jm - 1];
   const zodiac    = zodiacSigns[jm - 1];
   const season    = getSeason(jm);
@@ -107,17 +108,17 @@ function buildEmbed() {
 
   return new EmbedBuilder()
     .setColor(0x2f6b3f)
-    .setTitle("📅  Kingdom of Iran | تقویم شمسی")
-    .setDescription(`> **${weekday}، ${toPersianNum(jd)} ${monthName} ${toPersianNum(jy)}**`)
+    .setTitle("📅  Kingdom of Iran | تقویم شاهنشاهی")
+    .setDescription(`> **${weekday}، ${toPersianNum(jd)} ${monthName} ${toPersianNum(imperialYear)}**`)
     .addFields(
-      { name: "📆 تاریخ کامل", value: `\`${toPersianNum(jy)}/${String(jm).padStart(2,"0")}/${String(jd).padStart(2,"0")}\``, inline: true },
+      { name: "👑 سال شاهنشاهی", value: `\`${toPersianNum(imperialYear)}\``, inline: true },
+      { name: "📆 تاریخ کامل", value: `\`${toPersianNum(imperialYear)}/${String(jm).padStart(2,"0")}/${String(jd).padStart(2,"0")}\``, inline: true },
       { name: "🕰️ ساعت (تهران)", value: `\`${hours}:${minutes}\``, inline: true },
       { name: "🌿 فصل", value: season, inline: true },
       { name: "⭐ برج ماه", value: zodiac.name, inline: true },
-      { name: "📖 ماه شمسی", value: `ماه **${monthName}** — ماه ${toPersianNum(jm)}ام سال`, inline: true },
       { name: "🗓️ روز سال", value: `روز **${toPersianNum(getDayOfYear(jm, jd))}** از ۳۶۵`, inline: true }
     )
-    .setFooter({ text: "Kingdom of Iran • تقویم جلالی" })
+    .setFooter({ text: "Kingdom of Iran • تقویم شاهنشاهی" })
     .setTimestamp();
 }
 
