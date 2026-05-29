@@ -245,6 +245,9 @@ client.on("interactionCreate", async (interaction) => {
 
   // /setupedam
   if (cmd === "setupedam") {
+    if (!interaction.member.permissions.has("Administrator")) {
+      return interaction.reply({ content: "❌ فقط ادمین‌ها می‌توانند از این دستور استفاده کنند!", ephemeral: true });
+    }
     const channel = interaction.options.getChannel("channel");
     edamChannels[interaction.guildId] = channel.id;
     return interaction.reply({
@@ -255,6 +258,9 @@ client.on("interactionCreate", async (interaction) => {
 
   // /edam
   if (cmd === "edam") {
+    if (!interaction.member.permissions.has("Administrator")) {
+      return interaction.reply({ content: "❌ فقط ادمین‌ها می‌توانند از این دستور استفاده کنند!", ephemeral: true });
+    }
     const channelId = edamChannels[interaction.guildId];
     if (!channelId) return interaction.reply({ content: "❌ ابتدا `/setupedam` را اجرا کنید!", ephemeral: true });
 
@@ -293,6 +299,9 @@ client.on("interactionCreate", async (interaction) => {
   // /tolidXXX — تنظیم کانال تولید
   const setupMap = { tolidf22: "f22", tolidf16: "f16", tolidgun: "gun", tolidtir: "tir", tolidnaft: "naft" };
   if (setupMap[cmd]) {
+    if (!interaction.member.permissions.has("Administrator")) {
+      return interaction.reply({ content: "❌ فقط ادمین‌ها می‌توانند از این دستور استفاده کنند!", ephemeral: true });
+    }
     const type    = setupMap[cmd];
     const info    = productions[type];
     const channel = interaction.options.getChannel("channel");
@@ -325,7 +334,7 @@ client.on("interactionCreate", async (interaction) => {
       .setFooter({ text: "Kingdom of Iran • بانک ملی" })
       .setTimestamp();
 
-    return interaction.reply({ embeds: [embed], ephemeral: true });
+    return interaction.reply({ embeds: [embed] });
   }
 
   // /setprice
@@ -349,13 +358,15 @@ client.on("interactionCreate", async (interaction) => {
         .setTitle("✅ موجودی تنظیم شد")
         .setDescription(`موجودی **${target.username}** به **${formatted}** تومان تنظیم شد.`)
         .setFooter({ text: "Kingdom of Iran • بانک ملی" })
-      ],
-      ephemeral: true
+      ]
     });
   }
 
   // /staregh — شروع همه تولیدها
   if (cmd === "staregh") {
+    if (!interaction.member.permissions.has("Administrator")) {
+      return interaction.reply({ content: "❌ فقط ادمین‌ها می‌توانند از این دستور استفاده کنند!", ephemeral: true });
+    }
     const guildProds = prodChannels[interaction.guildId];
     if (!guildProds || Object.keys(guildProds).length === 0) {
       return interaction.reply({ content: "❌ هنوز هیچ کانال تولیدی تنظیم نشده!", ephemeral: true });
@@ -415,6 +426,9 @@ client.on("messageCreate", async (message) => {
 
   try {
     const member = await message.guild.members.fetch(message.author.id);
+
+    // ادمین‌ها مجاز به همه چیز هستند
+    if (member.permissions.has("Administrator")) return;
 
     // ─── ارسال ویدیو → اعدام (بن دائم) ─────────────────────────────────────
     const hasVideo = message.attachments.some(att => {
