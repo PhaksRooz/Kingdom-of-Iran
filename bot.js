@@ -97,6 +97,16 @@ function buildCalenderEmbed() {
     .setTimestamp();
 }
 
+
+// ─── سیستم بانک ─────────────────────────────────────────────────────────────
+const bankData = {}; // userId -> { money: string }
+
+function formatMoney(amount) {
+  // اضافه کردن کاما هر ۳ رقم
+  const num = amount.replace(/[^0-9]/g, '');
+  return Number(num).toLocaleString('fa-IR');
+}
+
 // ─── تنظیمات تولید ──────────────────────────────────────────────────────────
 const edamChannels = {};
 
@@ -192,6 +202,26 @@ client.once("ready", async () => {
     channelOption("tolidgun",  "🔫 تنظیم کانال تولید اسلحه"),
     channelOption("tolidtir",  "🟡 تنظیم کانال تولید تیر"),
     channelOption("tolidnaft", "🛢️ تنظیم کانال تولید نفت"),
+
+    new SlashCommandBuilder()
+      .setName("bankinfo")
+      .setDescription("🏦 مشاهده اطلاعات بانکی شما")
+      .toJSON(),
+
+    new SlashCommandBuilder()
+      .setName("setprice")
+      .setDescription("💰 تنظیم موجودی بانکی یک کاربر (فقط ادمین)")
+      .addUserOption(opt =>
+        opt.setName("user")
+          .setDescription("کاربر مورد نظر")
+          .setRequired(true)
+      )
+      .addStringOption(opt =>
+        opt.setName("price")
+          .setDescription("مقدار پول (مثلاً: 34000000)")
+          .setRequired(true)
+      )
+      .toJSON(),
   ];
 
   const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
@@ -273,6 +303,53 @@ client.on("interactionCreate", async (interaction) => {
         .setTitle(`${info.emoji} تنظیم تولید ${info.name}`)
         .setDescription(`کانال **<#${channel.id}>** برای تولید ${info.name} تنظیم شد.\nبرای شروع تولید از \`/staregh\` استفاده کن.`)
         .setFooter({ text: "Kingdom of Iran" })],
+      ephemeral: true
+    });
+  }
+
+  // /bankinfo
+  if (cmd === "bankinfo") {
+    const userId = interaction.user.id;
+    const data = bankData[userId];
+    const money = data ? data.money : "0";
+
+    const embed = new EmbedBuilder()
+      .setColor(0xf0c040)
+      .setTitle("🏦 اطلاعات بانکی")
+      .addFields(
+        { name: "👤 اسم شما",     value: `**${interaction.user.username}**`, inline: false },
+        { name: "🪪 کدملی شما",   value: `\`${userId}\``,                    inline: false },
+        { name: "💰 مقدار پول",   value: `**${money}** تومان`,               inline: false },
+      )
+      .setThumbnail(interaction.user.displayAvatarURL())
+      .setFooter({ text: "Kingdom of Iran • بانک ملی" })
+      .setTimestamp();
+
+    return interaction.reply({ embeds: [embed], ephemeral: true });
+  }
+
+  // /setprice
+  if (cmd === "setprice") {
+    if (!interaction.member.permissions.has("Administrator")) {
+      return interaction.reply({ content: "❌ فقط ادمین‌ها می‌توانند موجودی تنظیم کنند!", ephemeral: true });
+    }
+
+    const target = interaction.options.getUser("user");
+    const price  = interaction.options.getString("price");
+
+    // فرمت عدد با کاما
+    const rawNum = price.replace(/[^0-9]/g, '');
+    const formatted = Number(rawNum).toLocaleString('fa-IR');
+
+    bankData[target.id] = { money: formatted };
+
+    return interaction.reply({
+      embeds: [new EmbedBuilder()
+        .setColor(0xf0c040)
+        .setTitle("✅ موجودی تنظیم شد")
+        .setDescription(`موجودی **${target.username}** به **${formatted}** تومان تنظیم شد.`)
+        .setFooter({ text: "Kingdom of Iran • بانک ملی" })
+      ],
       ephemeral: true
     });
   }
