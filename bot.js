@@ -310,4 +310,92 @@ client.on("messageCreate", async (message) => {
   }
 });
 
+
+// ─── سیستم امنیتی ───────────────────────────────────────────────────────────
+const videoExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mpeg', '.mpg', '.m4v', '.3gp'];
+const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff'];
+const discordInviteRegex = /(discord\.gg|discord\.com\/invite|discordapp\.com\/invite)\/[a-zA-Z0-9]+/i;
+
+async function sendWarnAndDelete(channel, userId, title, desc) {
+  try {
+    const warn = await channel.send({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0xff0000)
+          .setTitle(title)
+          .setDescription(`<@${userId}> ${desc}`)
+          .setFooter({ text: "Kingdom of Iran • سیستم امنیتی" })
+          .setTimestamp()
+      ]
+    });
+    setTimeout(() => warn.delete().catch(() => {}), 10000);
+  } catch(e) {}
+}
+
+client.on("messageCreate", async (message) => {
+  if (message.author.bot) return;
+  if (!message.guild) return;
+
+  try {
+    const member = await message.guild.members.fetch(message.author.id);
+
+    // ─── ارسال ویدیو → اعدام (بن دائم) ─────────────────────────────────────
+    const hasVideo = message.attachments.some(att => {
+      const name = att.name?.toLowerCase() || "";
+      return videoExtensions.some(ext => name.endsWith(ext)) || (att.contentType && att.contentType.startsWith("video/"));
+    });
+
+    if (hasVideo) {
+      await message.delete();
+
+      // ثبت در کانال اعدام اگه تنظیم شده
+      const edamChId = edamChannels[message.guild.id];
+      if (edamChId) {
+        const edamCh = await client.channels.fetch(edamChId);
+        await edamCh.send({
+          embeds: [new EmbedBuilder()
+            .setColor(0x8b0000)
+            .setTitle("⚔️ اعدام")
+            .addFields(
+              { name: "👤 نام",       value: `<@${message.author.id}>`, inline: false },
+              { name: "💀 دلیل مرگ", value: "ارسال ویدیو در سرور",     inline: false },
+            )
+            .setThumbnail(message.author.displayAvatarURL())
+            .setFooter({ text: "Kingdom of Iran" })
+            .setTimestamp()
+          ]
+        });
+      }
+
+      await message.guild.members.ban(message.author.id, { reason: "ارسال ویدیو در سرور" });
+      await sendWarnAndDelete(message.channel, message.author.id, "⚔️ اعدام!", "به دلیل ارسال ویدیو **اعدام** شد!");
+      return;
+    }
+
+    // ─── ارسال عکس → تایم‌اوت ۴ ساعت ──────────────────────────────────────
+    const hasImage = message.attachments.some(att => {
+      const name = att.name?.toLowerCase() || "";
+      return imageExtensions.some(ext => name.endsWith(ext)) || (att.contentType && att.contentType.startsWith("image/"));
+    });
+
+    if (hasImage) {
+      await message.delete();
+      await member.timeout(4 * 60 * 60 * 1000, "ارسال عکس در سرور ممنوع است");
+      await sendWarnAndDelete(message.channel, message.author.id, "🚫 ارسال عکس ممنوع!", "به دلیل ارسال عکس **۴ ساعت** میوت شد!");
+      return;
+    }
+
+    // ─── ارسال لینک دیسکورد → تایم‌اوت ۱۰ ساعت ────────────────────────────
+    if (discordInviteRegex.test(message.content)) {
+      await message.delete();
+      await member.timeout(10 * 60 * 60 * 1000, "ارسال لینک سرور دیسکورد ممنوع است");
+      await sendWarnAndDelete(message.channel, message.author.id, "🔗 لینک دیسکورد ممنوع!", "به دلیل ارسال لینک سرور دیسکورد **۱۰ ساعت** تایم‌اوت شد!");
+      return;
+    }
+
+  } catch (err) {
+    console.error("❌ خطا در سیستم امنیتی:", err);
+  }
+});
+
 client.login(process.env.DISCORD_TOKEN);
