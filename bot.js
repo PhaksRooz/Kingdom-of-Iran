@@ -204,6 +204,16 @@ client.once("ready", async () => {
     channelOption("tolidnaft", "🛢️ تنظیم کانال تولید نفت"),
 
     new SlashCommandBuilder()
+      .setName("startdahk")
+      .setDescription("💵 شروع سیستم حقوق هفتگی بر اساس دهک")
+      .addChannelOption(opt =>
+        opt.setName("channel")
+          .setDescription("کانالی که پیام حقوق‌ها توش ارسال میشه")
+          .setRequired(true)
+      )
+      .toJSON(),
+
+    new SlashCommandBuilder()
       .setName("bankinfo")
       .setDescription("🏦 مشاهده اطلاعات بانکی شما")
       .toJSON(),
@@ -359,6 +369,39 @@ client.on("interactionCreate", async (interaction) => {
         .setDescription(`موجودی **${target.username}** به **${formatted}** تومان تنظیم شد.`)
         .setFooter({ text: "Kingdom of Iran • بانک ملی" })
       ]
+    });
+  }
+
+  // /startdahk — شروع سیستم حقوق هفتگی
+  if (cmd === "startdahk") {
+    if (!interaction.member.permissions.has("Administrator")) {
+      return interaction.reply({ content: "❌ فقط ادمین‌ها می‌توانند از این دستور استفاده کنند!", ephemeral: true });
+    }
+
+    const channel = interaction.options.getChannel("channel");
+    dahkChannels[interaction.guildId] = channel.id;
+
+    // اگه قبلاً تایمر داشت پاکش کن
+    if (dahkTimers[interaction.guildId]) {
+      clearInterval(dahkTimers[interaction.guildId]);
+    }
+
+    // اول الان یه بار واریز کن
+    payDahkSalaries(interaction.guild, channel.id);
+
+    // بعد هر ۷ روز
+    dahkTimers[interaction.guildId] = setInterval(() => {
+      payDahkSalaries(interaction.guild, channel.id);
+    }, 7 * 24 * 60 * 60 * 1000);
+
+    return interaction.reply({
+      embeds: [new EmbedBuilder()
+        .setColor(0x27ae60)
+        .setTitle("✅ سیستم حقوق فعال شد!")
+        .setDescription(`حقوق‌ها هر **۷ روز** به کانال <#${channel.id}> واریز میشن.`)
+        .setFooter({ text: "Kingdom of Iran • سیستم حقوق" })
+      ],
+      ephemeral: true
     });
   }
 
