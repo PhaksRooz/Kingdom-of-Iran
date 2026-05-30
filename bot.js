@@ -378,6 +378,8 @@ client.on("interactionCreate", async (interaction) => {
       return interaction.reply({ content: "❌ فقط ادمین‌ها می‌توانند از این دستور استفاده کنند!", ephemeral: true });
     }
 
+    await interaction.deferReply({ ephemeral: true });
+
     const channel = interaction.options.getChannel("channel");
     dahkChannels[interaction.guildId] = channel.id;
 
@@ -387,21 +389,20 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     // اول الان یه بار واریز کن
-    payDahkSalaries(interaction.guild, channel.id);
+    await payDahkSalaries(interaction.guild, channel.id);
 
     // بعد هر ۷ روز
     dahkTimers[interaction.guildId] = setInterval(() => {
       payDahkSalaries(interaction.guild, channel.id);
     }, 7 * 24 * 60 * 60 * 1000);
 
-    return interaction.reply({
+    return interaction.editReply({
       embeds: [new EmbedBuilder()
         .setColor(0x27ae60)
         .setTitle("✅ سیستم حقوق فعال شد!")
         .setDescription(`حقوق‌ها هر **۷ روز** به کانال <#${channel.id}> واریز میشن.`)
         .setFooter({ text: "Kingdom of Iran • سیستم حقوق" })
-      ],
-      ephemeral: true
+      ]
     });
   }
 
