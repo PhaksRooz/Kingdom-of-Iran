@@ -112,11 +112,12 @@ const edamChannels = {};
 
 // نوع تولیدها
 const productions = {
-  f22:  { emoji: "✈️",  name: "جنگنده F-22",  unit: "جنگنده" },
-  f16:  { emoji: "🛩️", name: "جنگنده F-16",  unit: "جنگنده" },
-  gun:  { emoji: "🔫",  name: "اسلحه",         unit: "اسلحه"  },
-  tir:  { emoji: "🟡",  name: "تیر",           unit: "تیر"    },
-  naft: { emoji: "🛢️", name: "نفت",           unit: "بشکه"   },
+  f22:   { emoji: "✈️",  name: "جنگنده F-22",       unit: "جنگنده", image: null },
+  f16:   { emoji: "🛩️", name: "جنگنده F-16",       unit: "جنگنده", image: null },
+  gun:   { emoji: "🔫",  name: "اسلحه",              unit: "اسلحه",  image: null },
+  tir:   { emoji: "🟡",  name: "تیر",                unit: "تیر",    image: null },
+  naft:  { emoji: "🛢️", name: "نفت",                unit: "بشکه",   image: null },
+  sigar: { emoji: "🚬",  name: "سیگار وینیستون",     unit: "سیگار",  image: "https://cdn.discordapp.com/attachments/1411563496499318845/1510491446996631602/Sgiar_Winston.jpg" },
 };
 
 // ذخیره کانال‌های تولید و تایمرها
@@ -146,6 +147,7 @@ function startProduction(guild, type) {
         .setDescription(`**${amount}** ${info.unit} ${info.name} تولید شد!`)
         .setFooter({ text: "Kingdom of Iran • سیستم تولید" })
         .setTimestamp();
+      if (info.image) embed.setImage(info.image);
       await channel.send({ embeds: [embed] });
     } catch (err) {
       console.error(`خطا در تولید ${type}:`, err);
@@ -202,6 +204,7 @@ client.once("ready", async () => {
     channelOption("tolidgun",  "🔫 تنظیم کانال تولید اسلحه"),
     channelOption("tolidtir",  "🟡 تنظیم کانال تولید تیر"),
     channelOption("tolidnaft", "🛢️ تنظیم کانال تولید نفت"),
+    channelOption("tolidsigar", "🚬 تنظیم کانال تولید سیگار وینیستون"),
 
     new SlashCommandBuilder()
       .setName("startdahk")
@@ -307,7 +310,7 @@ client.on("interactionCreate", async (interaction) => {
   }
 
   // /tolidXXX — تنظیم کانال تولید
-  const setupMap = { tolidf22: "f22", tolidf16: "f16", tolidgun: "gun", tolidtir: "tir", tolidnaft: "naft" };
+  const setupMap = { tolidf22: "f22", tolidf16: "f16", tolidgun: "gun", tolidtir: "tir", tolidnaft: "naft", tolidsigar: "sigar" };
   if (setupMap[cmd]) {
     if (!interaction.member.permissions.has("Administrator")) {
       return interaction.reply({ content: "❌ فقط ادمین‌ها می‌توانند از این دستور استفاده کنند!", ephemeral: true });
