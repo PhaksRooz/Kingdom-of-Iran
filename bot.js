@@ -112,12 +112,12 @@ const edamChannels = {};
 
 // نوع تولیدها
 const productions = {
-  f22:   { emoji: "✈️",  name: "جنگنده F-22",       unit: "جنگنده", image: null },
-  f16:   { emoji: "🛩️", name: "جنگنده F-16",       unit: "جنگنده", image: null },
-  gun:   { emoji: "🔫",  name: "اسلحه",              unit: "اسلحه",  image: null },
-  tir:   { emoji: "🟡",  name: "تیر",                unit: "تیر",    image: null },
-  naft:  { emoji: "🛢️", name: "نفت",                unit: "بشکه",   image: null },
-  sigar: { emoji: "🚬",  name: "سیگار وینیستون",     unit: "سیگار",  image: "https://cdn.discordapp.com/attachments/1411563496499318845/1510491446996631602/Sgiar_Winston.jpg" },
+  f22:   { emoji: "✈️",  name: "جنگنده F-22",   unit: "جنگنده", image: "https://cdn.discordapp.com/attachments/1411563496499318845/1510491474595283076/F22.png" },
+  f16:   { emoji: "🛩️", name: "جنگنده F-16",   unit: "جنگنده", image: "https://cdn.discordapp.com/attachments/1411563496499318845/1510491469927153814/F16.png" },
+  gun:   { emoji: "🔫",  name: "اسلحه",          unit: "اسلحه",  image: "https://cdn.discordapp.com/attachments/1411563496499318845/1510491519222677564/M4.jpg" },
+  tir:   { emoji: "🟡",  name: "تیر",            unit: "تیر",    image: "https://cdn.discordapp.com/attachments/1411563496499318845/1510491508422479953/Ammo.png" },
+  naft:  { emoji: "🛢️", name: "نفت",            unit: "بشکه",   image: "https://cdn.discordapp.com/attachments/1411563496499318845/1510494022441898164/Naft.jpg" },
+  sigar: { emoji: "🚬",  name: "سیگار وینیستون", unit: "سیگار",  image: "https://cdn.discordapp.com/attachments/1411563496499318845/1510491446996631602/Sgiar_Winston.jpg" },
 };
 
 // ذخیره کانال‌های تولید و تایمرها
