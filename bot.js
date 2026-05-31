@@ -144,7 +144,7 @@ function startProduction(guild, type) {
       const embed = new EmbedBuilder()
         .setColor(0xf0a500)
         .setTitle(`${info.emoji} تولید ${info.name}`)
-        .setDescription(`**${amount}** ${info.unit} ${info.name} تولید شد!`)
+        .setDescription(`**${amount}** عدد ${info.name} تولید شد!`)
         .setFooter({ text: "Kingdom of Iran • سیستم تولید" })
         .setTimestamp();
       if (info.image) embed.setImage(info.image);
